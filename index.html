@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blessed Sacrament Catholic School - Student Information System</title>
+    <!-- Tailwind CSS & FontAwesome Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK (v9/v10 Compat Script) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Segoe UI', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-size: 15px; }
+
+        .sidebar-royal {
+            background: linear-gradient(180deg, #1d4ed8 0%, #1e3a8a 100%);
+        }
+
+        .nav-btn-active {
+            background: rgba(255, 255, 255, 0.18) !important;
+            border-left: 4px solid #facc15 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+
+        .card-stat {
+            background: #ffffff;
+            border-radius: 1rem;
+            border-top: 4px solid transparent;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s ease-in-out;
+        }
+
+        .card-stat:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        @media print {
+            body * { visibility: hidden !important; }
+            #printable-excel-area, #printable-excel-area * { visibility: visible !important; }
+            #printable-excel-area {
+                position: absolute !important;
+                left: 0 !important; top: 0 !important;
+                width: 100% !important;
+                display: block !important;
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                padding: 10px !important;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4 landscape; margin: 5mm; }
+        }
+
+        /* EXCEL PRINT FORMATTING */
+        .excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            margin-bottom: 6px;
+        }
+        .excel-table th, .excel-table td {
+            border: 1px solid #000000;
+            padding: 3px 4px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        .hdr-blue { background-color: #00ccff !important; font-weight: bold; text-align: center; color: #000; }
+        .hdr-orange { background-color: #ffc000 !important; font-weight: bold; text-align: center; color: #000; }
+        .hdr-green { background-color: #92d050 !important; font-weight: bold; text-align: center; color: #000; }
+        .hdr-pink { background-color: #e1d5e7 !important; font-weight: bold; text-align: center; color: #000; }
+        .hdr-yellow { background-color: #ffff00 !important; font-weight: bold; color: #000; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen font-sans transition-colors duration-200">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-slate-900 px-4">
+        <div class="max-w-md w-full bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl p-8 border border-slate-200 dark:border-slate-700">
+            <div class="text-center mb-6">
+                <div class="w-24 h-24 mx-auto mb-3 flex items-center justify-center">
+                    <img src="logo.png" id="login-logo-img" onerror="handleLogoError(this)" alt="BSCS Logo" class="w-full h-full object-contain drop-shadow-md">
+                </div>
+                <h2 class="text-2xl font-extrabold text-slate-800 dark:text-white">Blessed Sacrament Catholic School</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">J.P. Ramoy St. Brgy. Talipapa, Quezon City</p>
+                <div class="mt-3 inline-block bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 px-4 py-1.5 rounded-full text-xs font-bold">
+                    Student Information System
+                </div>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 pl-3">Email Address</label>
+                    <input type="email" id="login-email" required class="w-full px-5 py-3 rounded-full border border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-base focus:ring-2 focus:ring-blue-600 outline-none transition" placeholder="e.g. Registrarbscs@gmail.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 pl-3">Password</label>
+                    <div class="relative">
+                        <input type="password" id="login-password" required class="w-full px-5 py-3 rounded-full border border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-base focus:ring-2 focus:ring-blue-600 outline-none transition pr-12" placeholder="••••••••">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">
+                            <i id="eye-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <p id="login-error" class="text-xs text-red-500 hidden text-center font-bold">Maling email o password. Pakisuri uli.</p>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-full transition text-base shadow-lg shadow-blue-600/30">
+                    Sign In to Dashboard
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400 space-y-1.5 pl-2">
+                <p class="font-bold text-slate-700 dark:text-slate-300">Department Accounts:</p>
+                <p>• <b>Registrar:</b> Registrarbscs@gmail.com</p>
+                <p>• <b>Guidance:</b> Guidancebscs@gmail.com</p>
+                <p>• <b>Health / Clinic:</b> Healthbscs@gmail.com</p>
+                <p>• <b>Library:</b> Librarybscs@gmail.com</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD APP -->
+    <div id="app-screen" class="hidden flex h-screen overflow-hidden">
+
+        <!-- SIDEBAR -->
+        <aside id="main-sidebar" class="w-72 sidebar-royal text-white flex flex-col justify-between shrink-0 no-print transition-all duration-300 shadow-xl z-20">
+            <div>
+                <div class="p-6 flex items-center justify-between border-b border-blue-600/50">
+                    <div class="flex items-center gap-3 sidebar-text">
+                        <div class="w-12 h-12 bg-white rounded-full p-1.5 shadow-md flex items-center justify-center shrink-0">
+                            <img src="logo.png" onerror="handleLogoError(this)" alt="Logo" class="w-full h-full object-contain">
+                        </div>
+                        <div>
+                            <h1 class="font-extrabold text-sm uppercase tracking-wider text-white leading-tight">BSCS PORTAL</h1>
+                            <span class="text-[11px] text-blue-200 block font-semibold">Student Portal</span>
+                        </div>
+                    </div>
+                    <button onclick="toggleSidebar()" class="text-blue-200 hover:text-white text-lg p-2 rounded-full hover:bg-blue-700/50">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                </div>
+
+                <div class="px-6 py-3 sidebar-text">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-blue-300">MAIN MENU</span>
+                </div>
+
+                <nav class="px-3 space-y-1 text-sm">
+                    <button onclick="switchTab('search')" id="nav-search" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-blue-100 hover:bg-blue-700/40 transition text-left font-medium">
+                        <i class="fa-solid fa-table-cells-large text-base w-5 text-center"></i> <span class="sidebar-text">Dashboard & Search</span>
+                    </button>
+                    <button onclick="switchTab('add-student')" id="nav-add-student" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-blue-100 hover:bg-blue-700/40 transition text-left font-medium">
+                        <i class="fa-solid fa-user-plus text-base w-5 text-center"></i> <span class="sidebar-text">Add Student Profile</span>
+                    </button>
+                    <button onclick="switchTab('guidance')" id="nav-guidance" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-blue-100 hover:bg-blue-700/40 transition text-left font-medium">
+                        <i class="fa-solid fa-user-shield text-base w-5 text-center"></i> <span class="sidebar-text">Guidance Module</span>
+                    </button>
+                    <button onclick="switchTab('health')" id="nav-health" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-blue-100 hover:bg-blue-700/40 transition text-left font-medium">
+                        <i class="fa-solid fa-heart-pulse text-base w-5 text-center"></i> <span class="sidebar-text">Health & Clinic</span>
+                    </button>
+                    <button onclick="switchTab('library')" id="nav-library" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-blue-100 hover:bg-blue-700/40 transition text-left font-medium">
+                        <i class="fa-solid fa-book-bookmark text-base w-5 text-center"></i> <span class="sidebar-text">Library Module</span>
+                    </button>
+                    <button onclick="switchTab('activity-logs')" id="nav-activity-logs" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-blue-100 hover:bg-blue-700/40 transition text-left font-medium">
+                        <i class="fa-solid fa-list-check text-base w-5 text-center"></i> <span class="sidebar-text">Activity Log</span>
+                    </button>
+                    <button onclick="switchTab('reports')" id="nav-reports" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-blue-100 hover:bg-blue-700/40 transition text-left font-medium">
+                        <i class="fa-solid fa-chart-column text-base w-5 text-center"></i> <span class="sidebar-text">Reports & Analytics</span>
+                    </button>
+                    <button onclick="switchTab('archive')" id="nav-archive" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-blue-100 hover:bg-blue-700/40 transition text-left font-medium">
+                        <i class="fa-solid fa-box-archive text-base w-5 text-center"></i> <span class="sidebar-text">Archives</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="p-3 border-t border-blue-600/50">
+                <div class="bg-blue-900/60 rounded-2xl p-3 flex items-center justify-between border border-blue-400/30">
+                    <div class="flex items-center gap-3 sidebar-text overflow-hidden">
+                        <div class="w-9 h-9 rounded-full bg-blue-500 text-white font-extrabold flex items-center justify-center shrink-0 border border-white/20">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="truncate">
+                            <p id="sb-user-name" class="font-bold text-xs text-white truncate">Registrar Account</p>
+                            <span class="text-[10px] text-emerald-300 font-semibold flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Online (Firebase DB)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN WRAPPER -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            
+            <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-8 py-3.5 flex items-center justify-between no-print shadow-sm">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-xl font-extrabold text-slate-800 dark:text-white">Dashboard</h2>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-50 dark:bg-slate-700 border border-blue-200 dark:border-slate-600 px-4 py-1.5 rounded-2xl flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center text-xs">C</div>
+                        <div class="text-left">
+                            <p id="top-user-email" class="text-xs font-bold text-slate-800 dark:text-slate-200">Registrarbscs@gmail.com</p>
+                            <span id="top-user-role" class="text-[10px] text-blue-600 dark:text-blue-400 font-semibold block">Registrar Account</span>
+                        </div>
+                    </div>
+
+                    <button onclick="promptLogout()" class="bg-red-50 hover:bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition">
+                        <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                    </button>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto bg-slate-100 dark:bg-slate-900 p-8 space-y-6">
+
+                <!-- 4 SUMMARY STAT CARDS (REGISTRAR ONLY) -->
+                <div id="registrar-stat-cards-container" class="grid grid-cols-1 md:grid-cols-4 gap-4 hidden">
+                    <div onclick="switchTab('add-student')" class="card-stat p-5 border-t-4 border-blue-600 flex items-center justify-between cursor-pointer group">
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-blue-600">ALL STUDENTS</p>
+                            <h3 id="stat-total-students" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Active Student Profiles</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl font-bold group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-file-lines"></i>
+                        </div>
+                    </div>
+
+                    <div onclick="switchTab('guidance')" class="card-stat p-5 border-t-4 border-amber-500 flex items-center justify-between cursor-pointer group">
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-amber-600">GUIDANCE LOGS</p>
+                            <h3 id="stat-guidance-count" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Currently being handled</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl font-bold group-hover:bg-amber-500 group-hover:text-white transition">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                    </div>
+
+                    <div onclick="switchTab('health')" class="card-stat p-5 border-t-4 border-emerald-500 flex items-center justify-between cursor-pointer group">
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-emerald-600">CLINIC VISITS</p>
+                            <h3 id="stat-health-count" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Released health logs</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl font-bold group-hover:bg-emerald-500 group-hover:text-white transition">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                    </div>
+
+                    <div onclick="switchTab('library')" class="card-stat p-5 border-t-4 border-purple-500 flex items-center justify-between cursor-pointer group">
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider group-hover:text-purple-600">LIBRARY BOOKS</p>
+                            <h3 id="stat-library-count" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+                            <span class="text-[11px] text-slate-400 mt-1 block">Borrowed book records</span>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-500 flex items-center justify-center text-xl font-bold group-hover:bg-purple-500 group-hover:text-white transition">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEARCH & DASHBOARD SECTION -->
+                <section id="tab-search" class="space-y-6">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <h2 class="text-xl font-extrabold mb-1 text-slate-800 dark:text-white">Student Records Search</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Search Student Number, LRN, or Name to load all department records instantly.</p>
+                        
+                        <div class="flex gap-3">
+                            <div class="relative flex-1">
+                                <i class="fa-solid fa-magnifying-glass absolute left-5 top-4 text-slate-400 text-lg"></i>
+                                <input type="text" id="global-search-input" onkeyup="handleStudentSearch()" placeholder="Type student name, LRN, or Student No..." class="w-full pl-12 pr-4 py-3.5 rounded-full border border-slate-300 dark:bg-slate-700 dark:border-slate-600 text-base outline-none focus:ring-2 focus:ring-blue-600">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="student-search-results" class="hidden bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-6">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 dark:border-slate-700">
+                            <div>
+                                <h3 id="sr-fullname" class="text-2xl font-black text-blue-700 dark:text-blue-400">---</h3>
+                                <p class="text-sm text-slate-500 mt-1">Student No: <span id="sr-studentno" class="font-mono font-bold text-slate-800 dark:text-slate-200">---</span> | LRN: <span id="sr-lrn" class="font-mono font-bold text-slate-800 dark:text-slate-200">---</span> | Grade: <span id="sr-grade" class="font-bold text-blue-600 dark:text-blue-400">---</span></p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="btn-print-excel" onclick="printStudentExcelReport()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-3 rounded-full flex items-center gap-2 shadow-lg shadow-blue-600/30 transition">
+                                    <i class="fa-solid fa-print"></i> Print Full Excel Form
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="border rounded-2xl p-5 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                                    <h4 class="font-bold text-sm uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-3 border-b pb-2 dark:border-slate-700"><i class="fa-solid fa-id-card mr-2"></i> Student Basic Records</h4>
+                                    <div class="grid grid-cols-2 gap-3 text-sm">
+                                        <p><b>Date of Birth:</b> <span id="sr-dob">---</span></p>
+                                        <p><b>Age:</b> <span id="sr-age">---</span></p>
+                                        <p><b>Gender:</b> <span id="sr-gender">---</span></p>
+                                        <p><b>Religion:</b> <span id="sr-religion">---</span></p>
+                                        <p class="col-span-2"><b>Birth Place:</b> <span id="sr-birthplace">---</span></p>
+                                        <p class="col-span-2"><b>Complete Address:</b> <span id="sr-address">---</span></p>
+                                    </div>
+                                </div>
+
+                                <div class="border rounded-2xl p-5 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                                    <h4 class="font-bold text-sm uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-3 border-b pb-2 dark:border-slate-700"><i class="fa-solid fa-users mr-2"></i> Parent / Guardian Information</h4>
+                                    <div id="sr-parent-info-display" class="text-sm space-y-2"></div>
+                                </div>
+
+                                <div class="border rounded-2xl p-5 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                                    <h4 class="font-bold text-sm uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-3 border-b pb-2 dark:border-slate-700"><i class="fa-solid fa-graduation-cap mr-2"></i> Academic History</h4>
+                                    <div id="sr-academic-history-display" class="text-sm space-y-2 overflow-x-auto"></div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="border rounded-2xl p-5 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                                    <h4 class="font-bold text-sm uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-3 border-b pb-2 dark:border-slate-700"><i class="fa-solid fa-user-shield mr-2"></i> Guidance Logs & Exam Results</h4>
+                                    <div id="sr-guidance-detailed-list" class="text-sm space-y-2"></div>
+                                </div>
+
+                                <div class="border rounded-2xl p-5 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                                    <h4 class="font-bold text-sm uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-3 border-b pb-2 dark:border-slate-700"><i class="fa-solid fa-heart-pulse mr-2"></i> Health & Clinic Consultations</h4>
+                                    <div id="sr-health-detailed-list" class="text-sm space-y-2"></div>
+                                </div>
+
+                                <div class="border rounded-2xl p-5 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                                    <h4 class="font-bold text-sm uppercase tracking-wider text-purple-700 dark:text-purple-400 mb-3 border-b pb-2 dark:border-slate-700"><i class="fa-solid fa-book-bookmark mr-2"></i> Library & Scholastic Records</h4>
+                                    <div id="sr-library-detailed-list" class="text-sm space-y-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ADD STUDENT TAB (REGISTRAR ONLY) -->
+                <section id="tab-add-student" class="hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-6">
+                        <h2 class="text-2xl font-bold text-blue-700 dark:text-blue-400"><i class="fa-solid fa-user-plus mr-2"></i>Registrar - Student Registration & Academic History</h2>
+
+                        <form onsubmit="saveNewStudent(event)" class="space-y-6">
+                            <div class="bg-blue-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-blue-200 dark:border-slate-700">
+                                <h3 class="text-sm font-extrabold uppercase text-blue-700 dark:text-blue-400 mb-4">1. Basic Student Records</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Student Number *</label>
+                                        <input type="text" id="add-studentno" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none" placeholder="e.g. 2026-0001">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">LRN *</label>
+                                        <input type="text" id="add-lrn" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Grade Level *</label>
+                                        <select id="add-grade" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                            <option>Pre-Kinder</option>
+                                            <option>Kinder</option>
+                                            <option>Grade 1</option><option>Grade 2</option><option>Grade 3</option>
+                                            <option>Grade 4</option><option>Grade 5</option><option>Grade 6</option>
+                                            <option>Grade 7</option><option>Grade 8</option><option>Grade 9</option>
+                                            <option selected>Grade 10</option><option>Grade 11</option><option>Grade 12</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Surname *</label>
+                                        <input type="text" id="add-lname" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">First Name *</label>
+                                        <input type="text" id="add-fname" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Middle Name</label>
+                                        <input type="text" id="add-mname" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Date of Birth *</label>
+                                        <input type="date" id="add-dob" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Gender *</label>
+                                        <select id="add-gender" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                            <option>Female</option>
+                                            <option>Male</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Religion</label>
+                                        <input type="text" id="add-religion" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none" value="Catholic">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block font-bold mb-1 pl-2">Birth Place</label>
+                                        <input type="text" id="add-birthplace" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block font-bold mb-1 pl-2">Complete Address *</label>
+                                        <input type="text" id="add-address" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-blue-200 dark:border-slate-700 space-y-4">
+                                <h3 class="text-sm font-extrabold uppercase text-blue-700 dark:text-blue-400 mb-2">2. Detailed Parent / Guardian Information</h3>
+                                
+                                <p class="font-bold text-xs uppercase text-slate-500">Father's Information</p>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                                    <input type="text" id="add-f-name" placeholder="Father's Name" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-f-occ" placeholder="Occupation" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-f-contact" placeholder="Contact Number" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="email" id="add-f-email" placeholder="Email" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-f-company" placeholder="Company Name" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-f-religion" placeholder="Religion" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-f-educ" placeholder="Educ. Attainment" class="px-3 py-2 rounded-lg border dark:bg-slate-700 md:col-span-2">
+                                </div>
+
+                                <p class="font-bold text-xs uppercase text-slate-500 mt-2">Mother's Information</p>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                                    <input type="text" id="add-m-name" placeholder="Mother's Name" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-m-occ" placeholder="Occupation" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-m-contact" placeholder="Contact Number" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="email" id="add-m-email" placeholder="Email" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-m-company" placeholder="Company Name" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-m-religion" placeholder="Religion" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-m-educ" placeholder="Educ. Attainment" class="px-3 py-2 rounded-lg border dark:bg-slate-700 md:col-span-2">
+                                </div>
+
+                                <p class="font-bold text-xs uppercase text-slate-500 mt-2">Legal Guardian Information</p>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                                    <input type="text" id="add-g-name" placeholder="Legal Guardian Name" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-g-occ" placeholder="Occupation" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-g-contact" placeholder="Contact Number" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="email" id="add-g-email" placeholder="Email" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                </div>
+
+                                <p class="font-bold text-xs uppercase text-slate-500 mt-2">Emergency Contact Person</p>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                                    <input type="text" id="add-emer-person" placeholder="Contact Person in case of Emergency" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-emer-contact" placeholder="Contact Number" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="text" id="add-emer-rel" placeholder="Relationship to Student" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                    <input type="email" id="add-emer-email" placeholder="Email Address" class="px-3 py-2 rounded-lg border dark:bg-slate-700">
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-blue-200 dark:border-slate-700 space-y-4">
+                                <h3 class="text-sm font-extrabold uppercase text-blue-700 dark:text-blue-400">3. Academic History (Pre-Kinder to Grade 12)</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-xs text-left border-collapse">
+                                        <thead class="bg-blue-600 text-white font-bold uppercase">
+                                            <tr>
+                                                <th class="p-2 border">Grade Level</th>
+                                                <th class="p-2 border">School Year</th>
+                                                <th class="p-2 border">School Name</th>
+                                                <th class="p-2 border">Section</th>
+                                                <th class="p-2 border">Class Adviser</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="academic-history-input-tbody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-full shadow-lg shadow-blue-600/30 text-base">
+                                    <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Save Profile to Firebase
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- GUIDANCE TAB -->
+                <section id="tab-guidance" class="hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-8">
+                        <div>
+                            <h2 class="text-2xl font-bold text-amber-600 dark:text-amber-400"><i class="fa-solid fa-user-shield mr-2"></i>Guidance Service's Record</h2>
+                        </div>
+
+                        <div class="bg-amber-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-amber-200 dark:border-slate-700 space-y-4">
+                            <h3 class="text-base font-bold text-amber-800 dark:text-amber-300">1. Student Guidance Assessment Profile</h3>
+                            <form onsubmit="saveGuidanceAssessment(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div class="md:col-span-3">
+                                    <label class="block font-bold mb-1 pl-2">Select Student *</label>
+                                    <select id="ga-student-select" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none"></select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Skills & Interest</label>
+                                    <input type="text" id="ga-skills" placeholder="e.g. Arts, Public Speaking" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Career Pathways</label>
+                                    <input type="text" id="ga-pathways" placeholder="e.g. STEM / Engineering" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Existing Condition</label>
+                                    <input type="text" id="ga-condition" placeholder="e.g. None" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <div class="md:col-span-3 flex justify-end">
+                                    <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2 rounded-full shadow-md">
+                                        Save Assessment Details
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="bg-amber-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-amber-200 dark:border-slate-700 space-y-4">
+                            <h3 class="text-base font-bold text-amber-800 dark:text-amber-300">2. Entrance Examination Result Entry</h3>
+                            <form onsubmit="saveEntranceExamResult(event)" class="space-y-4 text-sm">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Select Student *</label>
+                                        <select id="exam-student-select" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none"></select>
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Date of Entrance Exam *</label>
+                                        <input type="date" id="exam-date" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Evaluator *</label>
+                                        <input type="text" id="exam-evaluator" required placeholder="Ms. Guidance Evaluator" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 bg-white dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700">
+                                    <div>
+                                        <label class="block font-semibold text-xs mb-1">Verbal Comp.</label>
+                                        <input type="number" id="exam-vcomp" placeholder="Score" class="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-slate-700">
+                                    </div>
+                                    <div>
+                                        <label class="block font-semibold text-xs mb-1">Verbal Reasoning</label>
+                                        <input type="number" id="exam-vreas" placeholder="Score" class="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-slate-700">
+                                    </div>
+                                    <div>
+                                        <label class="block font-semibold text-xs mb-1">Quant. / Pictorial</label>
+                                        <input type="number" id="exam-quant" placeholder="Score" class="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-slate-700">
+                                    </div>
+                                    <div>
+                                        <label class="block font-semibold text-xs mb-1">Figural Reasoning</label>
+                                        <input type="number" id="exam-figural" placeholder="Score" class="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-slate-700">
+                                    </div>
+                                    <div>
+                                        <label class="block font-semibold text-xs mb-1">Total Score</label>
+                                        <input type="number" id="exam-total" placeholder="Total" class="w-full px-3 py-1.5 border rounded-lg text-xs dark:bg-slate-700 font-bold">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Remarks</label>
+                                        <input type="text" id="exam-remarks" placeholder="e.g. Passed" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">GWA</label>
+                                        <input type="text" id="exam-gwa" placeholder="e.g. 88.5" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Previous School</label>
+                                        <input type="text" id="exam-prevschool" placeholder="e.g. Elementary School" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-full shadow-md">
+                                    Save Exam Result
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="bg-amber-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-amber-200 dark:border-slate-700 space-y-4">
+                            <h3 class="text-base font-bold text-amber-800 dark:text-amber-300">3. Guidance Counselling Log Record</h3>
+                            <form onsubmit="saveGuidanceLog(event)" class="space-y-4 text-sm max-w-xl">
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Select Student *</label>
+                                    <select id="g-student-select" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none"></select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Date *</label>
+                                        <input type="date" id="g-date" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Facilitator *</label>
+                                        <input type="text" id="g-facilitator" required value="Ms. Angelie" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Brief Description *</label>
+                                    <input type="text" id="g-desc" required placeholder="e.g. For Counselling" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Remarks</label>
+                                    <input type="text" id="g-remarks" placeholder="e.g. Accomplished" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2.5 rounded-full shadow-md">Save Guidance Log</button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- HEALTH TAB -->
+                <section id="tab-health" class="hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-8">
+                        <div>
+                            <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-heart-pulse mr-2"></i>Clinical Record & Health Module</h2>
+                        </div>
+
+                        <div class="bg-emerald-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-emerald-200 dark:border-slate-700 space-y-4">
+                            <h3 class="text-base font-bold text-emerald-800 dark:text-emerald-300">1. Annual Body Mass Index (BMI) Entry</h3>
+                            <form onsubmit="saveBmiRecord(event)" class="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+                                <div class="md:col-span-2">
+                                    <label class="block font-bold mb-1 pl-2">Select Student *</label>
+                                    <select id="bmi-student-select" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none"></select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Grade Level *</label>
+                                    <select id="bmi-grade" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                        <option>Pre-Kinder</option>
+                                        <option>Kinder</option>
+                                        <option>Grade 1</option><option>Grade 2</option><option>Grade 3</option>
+                                        <option>Grade 4</option><option>Grade 5</option><option>Grade 6</option>
+                                        <option>Grade 7</option><option>Grade 8</option><option>Grade 9</option>
+                                        <option selected>Grade 10</option><option>Grade 11</option><option>Grade 12</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Height (cm) *</label>
+                                    <input type="number" id="bmi-height" required placeholder="155" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Weight (kg) *</label>
+                                    <input type="number" id="bmi-weight" required placeholder="48" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <div class="md:col-span-5 flex justify-end">
+                                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-2.5 rounded-full shadow-md">
+                                        <i class="fa-solid fa-plus mr-1"></i> Save Annual BMI Record
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="bg-emerald-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-emerald-200 dark:border-slate-700 space-y-4">
+                            <h3 class="text-base font-bold text-emerald-800 dark:text-emerald-300">2. Clinic Daily Consultation Log</h3>
+                            <form onsubmit="saveHealthLog(event)" class="space-y-4 text-sm max-w-xl">
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Select Student *</label>
+                                    <select id="h-student-select" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none"></select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Date *</label>
+                                        <input type="date" id="h-date" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block font-bold mb-1 pl-2">Complaint / Illness *</label>
+                                        <input type="text" id="h-desc" required placeholder="e.g. Fever" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                    </div>
+                                </div>
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-full shadow-md">Save Clinic Log</button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- LIBRARY TAB -->
+                <section id="tab-library" class="hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-8">
+                        <div>
+                            <h2 class="text-2xl font-bold text-purple-600 dark:text-purple-400"><i class="fa-solid fa-book-bookmark mr-2"></i>Library and Media Center Records</h2>
+                        </div>
+
+                        <div class="bg-purple-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-purple-200 dark:border-slate-700 space-y-4">
+                            <h3 class="text-base font-bold text-purple-800 dark:text-purple-300">1. Scholastic Record Entry (Grade 1 - 6)</h3>
+                            <form onsubmit="saveScholasticRecord(event)" class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Select Student *</label>
+                                    <select id="sch-student-select" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none"></select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Grade Level *</label>
+                                    <select id="sch-grade" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                        <option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Scholastic Record *</label>
+                                    <input type="text" id="sch-record" required placeholder="Passed / Outstanding" class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-full shadow-md">Save Scholastic Record</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="bg-purple-50/50 dark:bg-slate-900/50 p-6 rounded-2xl border border-purple-200 dark:border-slate-700 space-y-4">
+                            <h3 class="text-base font-bold text-purple-800 dark:text-purple-300">2. Borrowed Books & Returns Log</h3>
+                            <form onsubmit="saveLibraryLog(event)" class="space-y-4 text-sm max-w-xl">
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Select Student *</label>
+                                    <select id="l-student-select" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none"></select>
+                                </div>
+                                <div>
+                                    <label class="block font-bold mb-1 pl-2">Borrowed Book Title *</label>
+                                    <input type="text" id="l-book" required class="w-full px-4 py-2.5 rounded-full border dark:bg-slate-700 dark:border-slate-600 outline-none">
+                                </div>
+                                <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-6 py-2.5 rounded-full shadow-md">Save Borrowed Book Log</button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ACTIVITY LOGS TAB -->
+                <section id="tab-activity-logs" class="hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <h2 class="text-2xl font-bold mb-1 text-blue-600 dark:text-blue-400"><i class="fa-solid fa-list-check mr-2"></i>System Activity Logs</h2>
+                        <div class="overflow-x-auto mt-4">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-100 dark:bg-slate-700 uppercase font-bold text-slate-600 dark:text-slate-300">
+                                    <tr>
+                                        <th class="p-4">Timestamp</th>
+                                        <th class="p-4">Department</th>
+                                        <th class="p-4">Action Taken</th>
+                                        <th class="p-4">Student ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="activity-logs-tbody" class="divide-y dark:divide-slate-700"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- REPORTS TAB -->
+                <section id="tab-reports" class="hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-6">
+                        <h2 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400"><i class="fa-solid fa-chart-column mr-2"></i>Reports & Analytics</h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-blue-50 dark:bg-slate-700 p-5 rounded-2xl border border-blue-200 dark:border-slate-600">
+                                <p class="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase">Total Enrolled Students</p>
+                                <h3 id="rep-total-students" class="text-3xl font-black mt-1">0</h3>
+                            </div>
+                            <div class="bg-amber-50 dark:bg-slate-700 p-5 rounded-2xl border border-amber-200 dark:border-slate-600">
+                                <p class="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase">Total Guidance Cases</p>
+                                <h3 id="rep-guidance-cases" class="text-3xl font-black mt-1">0</h3>
+                            </div>
+                            <div class="bg-emerald-50 dark:bg-slate-700 p-5 rounded-2xl border border-emerald-200 dark:border-slate-600">
+                                <p class="text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase">Total Clinic Visits</p>
+                                <h3 id="rep-clinic-visits" class="text-3xl font-black mt-1">0</h3>
+                            </div>
+                        </div>
+
+                        <div class="border rounded-2xl p-5 dark:border-slate-700">
+                            <h3 class="font-bold text-sm uppercase mb-3">Enrolled Students Breakdown by Grade Level</h3>
+                            <div id="rep-grade-breakdown" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ARCHIVE TAB -->
+                <section id="tab-archive" class="hidden space-y-6">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <h2 class="text-2xl font-bold text-rose-600 dark:text-rose-400"><i class="fa-solid fa-box-archive mr-2"></i>Archives</h2>
+                        <p class="text-xs text-slate-500 mt-1">Archived student profiles and past academic records.</p>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- LOGOUT MODAL -->
+    <div id="logout-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-sm w-full p-6 text-center border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4">
+            <h3 class="text-xl font-bold text-slate-800 dark:text-white">Sign Out Confirmation</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">Sigurado ka bang gusto mong mag-log out?</p>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeLogoutModal()" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2.5 rounded-full text-sm">Cancel</button>
+                <button onclick="confirmLogout()" class="flex-1 bg-red-600 text-white font-bold py-2.5 rounded-full text-sm shadow-md">Oo, Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRINTABLE EXCEL AREA WITH LOWER RIGHT REGISTRAR SIGNATURE -->
+    <div id="printable-excel-area" class="hidden">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 8px;">
+            <div style="width: 45px; height: 45px;">
+                <img src="logo.png" onerror="handleLogoError(this)" alt="Logo" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
+            <div style="text-align: center;">
+                <h2 style="font-size: 15px; font-weight: bold; margin: 0; text-transform: uppercase;">BLESSED SACRAMENT CATHOLIC SCHOOL</h2>
+                <p style="font-size: 10px; margin: 0;">J.P. Ramoy St. Brgy. Talipapa, Quezon City</p>
+            </div>
+        </div>
+
+        <table class="excel-table">
+            <tr>
+                <td style="width: 8%; background-color: #ffff00; font-weight: bold; text-align: center;">SEARCH</td>
+                <td style="background-color: #ffff00; font-weight: bold;" id="pr-search-name">---</td>
+            </tr>
+        </table>
+
+        <div style="display: flex; gap: 6px; align-items: flex-start;">
+            <!-- COLUMN 1: REGISTRAR + PINK LIBRARY -->
+            <div style="flex: 1;">
+                <table class="excel-table">
+                    <tr><td class="hdr-blue" colspan="4">STUDENT RECORDS</td></tr>
+                    <tr><td><b>Student Number:</b></td><td id="pr-sno">---</td><td><b>LRN:</b></td><td id="pr-lrn">---</td></tr>
+                    <tr><td><b>Name:</b></td><td colspan="3" id="pr-fullname">---</td></tr>
+                    <tr><td><b>Date of Birth:</b></td><td id="pr-dob">---</td><td><b>Age:</b></td><td id="pr-age">---</td></tr>
+                    <tr><td><b>Gender:</b></td><td id="pr-gender">---</td><td><b>Religion:</b></td><td id="pr-religion">---</td></tr>
+                    <tr><td><b>Address:</b></td><td colspan="3" id="pr-address">---</td></tr>
+                </table>
+
+                <table class="excel-table" style="margin-top: 4px;">
+                    <tr><td class="hdr-blue" colspan="4">PARENT / GUARDIAN INFORMATION</td></tr>
+                    <tr><td><b>Father:</b></td><td id="pr-f-name">---</td><td><b>Contact:</b></td><td id="pr-f-contact">---</td></tr>
+                    <tr><td><b>Mother:</b></td><td id="pr-m-name">---</td><td><b>Contact:</b></td><td id="pr-m-contact">---</td></tr>
+                    <tr><td><b>Guardian:</b></td><td id="pr-g-name">---</td><td><b>Contact:</b></td><td id="pr-g-contact">---</td></tr>
+                    <tr><td><b>Emergency:</b></td><td id="pr-emer-person">---</td><td><b>Rel / Tel:</b></td><td id="pr-emer-rel">---</td></tr>
+                </table>
+
+                <table class="excel-table" style="margin-top: 4px;">
+                    <tr><td class="hdr-pink" colspan="4">LIBRARY AND MEDIA CENTER RECORDS</td></tr>
+                    <tr class="hdr-yellow"><td>GRADE</td><td>SCHOLASTIC RECORD</td><td>REMARKS</td><td>CLASS ADVISER</td></tr>
+                    <tbody id="pr-scholastic-tbody"><tr><td colspan="4" style="text-align:center;">Walang rekor</td></tr></tbody>
+                    <tr class="hdr-yellow"><td>DATE</td><td>BORROWED BOOKS</td><td>REMARKS</td><td>DATE RETURN</td></tr>
+                    <tbody id="pr-library-tbody"><tr><td colspan="4" style="text-align:center;">Walang rekor</td></tr></tbody>
+                </table>
+            </div>
+
+            <!-- COLUMN 2: GUIDANCE -->
+            <div style="flex: 1;">
+                <table class="excel-table">
+                    <tr><td class="hdr-orange" colspan="4">GUIDANCE SERVICE'S RECORD</td></tr>
+                    <tr><td><b>Skills & Interest:</b></td><td id="pr-g-skills">---</td><td><b>Career Pathways:</b></td><td id="pr-g-pathways">---</td></tr>
+                    <tr><td><b>Existing Condition:</b></td><td colspan="3" id="pr-g-condition">---</td></tr>
+                    
+                    <tr class="hdr-orange"><td colspan="4">ENTRANCE EXAMINATION RESULT</td></tr>
+                    <tr><td><b>Exam Date:</b></td><td id="pr-exam-date">---</td><td><b>Evaluator:</b></td><td id="pr-exam-evaluator">---</td></tr>
+                    <tr class="hdr-yellow"><td>V. Comp</td><td>V. Reas</td><td>Quant / Pic</td><td>Figural</td></tr>
+                    <tbody id="pr-exam-scores-tbody"><tr><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+                    <tr class="hdr-yellow"><td>Total Score</td><td>Remarks</td><td>GWA</td><td>Previous School</td></tr>
+                    <tbody id="pr-exam-summary-tbody"><tr><td>-</td><td>-</td><td>-</td><td>-</td></tr></tbody>
+
+                    <tr class="hdr-orange"><td colspan="4">GUIDANCE LOG RECORD</td></tr>
+                    <tr class="hdr-yellow"><td>DATE</td><td>BRIEF DESCRIPTION</td><td>REMARKS</td><td>FACILITATOR</td></tr>
+                    <tbody id="pr-guidance-tbody"><tr><td colspan="4" style="text-align:center;">Walang rekor</td></tr></tbody>
+                </table>
+            </div>
+
+            <!-- COLUMN 3: CLINICAL RECORD -->
+            <div style="flex: 1;">
+                <table class="excel-table">
+                    <tr><td class="hdr-green" colspan="4">CLINICAL RECORD</td></tr>
+                    <tr class="hdr-yellow"><td>Grade Level</td><td>Height</td><td>Weight</td><td>BMI Status</td></tr>
+                    <tbody id="pr-bmi-tbody"><tr><td colspan="4" style="text-align:center;">Walang rekor</td></tr></tbody>
+                    <tr class="hdr-yellow"><td>DATE</td><td>COMPLAINT</td><td>RECOMMENDATION</td><td>MEDICINE</td></tr>
+                    <tbody id="pr-health-tbody"><tr><td colspan="4" style="text-align:center;">Walang rekor</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- LOWER RIGHT REGISTRAR SIGNATURE BLOCK -->
+        <div style="margin-top: 30px; display: flex; justify-content: flex-end; padding-right: 20px;">
+            <div style="text-align: center; width: 220px;">
+                <p style="font-size: 10px; margin-bottom: 25px; text-align: left;">Prepared by:</p>
+                <p style="font-size: 11px; font-weight: bold; text-decoration: underline; text-transform: uppercase; margin: 0;">MARIA CAMILLE LANUZA</p>
+                <p style="font-size: 10px; font-weight: normal; margin-top: 2px;">Registrar</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE INITIALIZATION & SCRIPT LOGIC -->
+    <script>
+        // OFFICIAL FIREBASE CONFIGURATION
+        const firebaseConfig = {
+          apiKey: "AIzaSyDkL_ExJxdFGfL7ZXXeVFnLpfjmmMpBxYM",
+          authDomain: "bcsc-student-portal.firebaseapp.com",
+          projectId: "bcsc-student-portal",
+          storageBucket: "bcsc-student-portal.firebasestorage.app",
+          messagingSenderId: "1005627380202",
+          appId: "1:1005627380202:web:1759addd4c523f0a1ce293",
+          measurementId: "G-0YEFJXPYNQ"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        const ALL_GRADES = [
+            "Pre-Kinder", "Kinder", "Grade 1", "Grade 2", "Grade 3", "Grade 4",
+            "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"
+        ];
+
+        let studentsList = [];
+        let currentUser = null;
+
+        const ACCOUNTS = {
+            "Registrarbscs@gmail.com": { role: "Registrar", pass: "Registrarbscs123" },
+            "Guidancebscs@gmail.com": { role: "Guidance", pass: "Guidancebscs123" },
+            "Healthbscs@gmail.com": { role: "Health", pass: "Healthbscs123" },
+            "Librarybscs@gmail.com": { role: "Library", pass: "Librarybscs123" }
+        };
+
+        function handleLogoError(img) {
+            if (img.src.includes('logo.png')) img.src = 'logo.jpg';
+            else {
+                img.style.display = 'none';
+                if (!img.parentNode.querySelector('.fallback-badge')) {
+                    const fallback = document.createElement('div');
+                    fallback.className = 'fallback-badge w-full h-full bg-blue-900 text-amber-400 font-extrabold rounded-full flex items-center justify-center text-xl shadow-md border-2 border-amber-400';
+                    fallback.textContent = 'BSCS';
+                    img.parentNode.appendChild(fallback);
+                }
+            }
+        }
+
+        // REAL-TIME FIRESTORE LISTENER
+        function initRealtimeDatabase() {
+            db.collection("students").onSnapshot(snapshot => {
+                studentsList = [];
+                snapshot.forEach(doc => {
+                    studentsList.push({ id: doc.id, ...doc.data() });
+                });
+                renderDashboardStats();
+                updateDropdowns();
+                if (window.activeSearchQuery) {
+                    handleStudentSearch();
+                }
+            });
+
+            db.collection("auditLogs").orderBy("timestamp", "desc").limit(50).onSnapshot(snapshot => {
+                const logs = [];
+                snapshot.forEach(doc => logs.push(doc.data()));
+                renderActivityLogs(logs);
+            });
+        }
+
+        function addAuditLog(action, targetNo) {
+            db.collection("auditLogs").add({
+                timestamp: new Date().toLocaleString(),
+                user: currentUser ? currentUser.role : "System",
+                action: action,
+                target: targetNo
+            });
+        }
+
+        function buildAcademicHistoryRows() {
+            const tbody = document.getElementById("academic-history-input-tbody");
+            if (!tbody) return;
+            tbody.innerHTML = ALL_GRADES.map(g => `
+                <tr class="border-b dark:border-slate-700">
+                    <td class="p-2 font-bold">${g}</td>
+                    <td class="p-1"><input type="text" id="acad-sy-${g.replace(/\s+/g, '')}" placeholder="2026-2027" class="w-full px-2 py-1 border rounded dark:bg-slate-700"></td>
+                    <td class="p-1"><input type="text" id="acad-school-${g.replace(/\s+/g, '')}" placeholder="School Name" class="w-full px-2 py-1 border rounded dark:bg-slate-700"></td>
+                    <td class="p-1"><input type="text" id="acad-sec-${g.replace(/\s+/g, '')}" placeholder="Section" class="w-full px-2 py-1 border rounded dark:bg-slate-700"></td>
+                    <td class="p-1"><input type="text" id="acad-adv-${g.replace(/\s+/g, '')}" placeholder="Class Adviser" class="w-full px-2 py-1 border rounded dark:bg-slate-700"></td>
+                </tr>
+            `).join('');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById("login-email").value.trim();
+            const pass = document.getElementById("login-password").value.trim();
+
+            if (ACCOUNTS[email] && ACCOUNTS[email].pass === pass) {
+                currentUser = ACCOUNTS[email];
+                document.getElementById("login-screen").classList.add("hidden");
+                document.getElementById("app-screen").classList.remove("hidden");
+
+                document.getElementById("top-user-email").textContent = email;
+                document.getElementById("top-user-role").textContent = `${currentUser.role} Account`;
+                document.getElementById("sb-user-name").textContent = `${currentUser.role} Account`;
+
+                filterSidebarNav(currentUser.role);
+
+                const statCardsContainer = document.getElementById("registrar-stat-cards-container");
+                if (statCardsContainer) {
+                    if (currentUser.role === "Registrar") {
+                        statCardsContainer.classList.remove("hidden");
+                    } else {
+                        statCardsContainer.classList.add("hidden");
+                    }
+                }
+
+                buildAcademicHistoryRows();
+                initRealtimeDatabase();
+                switchTab('search');
+            } else {
+                document.getElementById("login-error").classList.remove("hidden");
+            }
+        }
+
+        function filterSidebarNav(role) {
+            const navIds = ['nav-search', 'nav-add-student', 'nav-guidance', 'nav-health', 'nav-library', 'nav-activity-logs', 'nav-reports', 'nav-archive'];
+            
+            navIds.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.classList.add('hidden');
+            });
+
+            document.getElementById('nav-search').classList.remove('hidden');
+
+            if (role === "Registrar") {
+                navIds.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.classList.remove('hidden');
+                });
+            } else if (role === "Guidance") {
+                document.getElementById('nav-guidance').classList.remove('hidden');
+            } else if (role === "Health") {
+                document.getElementById('nav-health').classList.remove('hidden');
+            } else if (role === "Library") {
+                document.getElementById('nav-library').classList.remove('hidden');
+            }
+        }
+
+        function promptLogout() { document.getElementById("logout-modal").classList.remove("hidden"); }
+        function closeLogoutModal() { document.getElementById("logout-modal").classList.add("hidden"); }
+        function confirmLogout() {
+            currentUser = null;
+            closeLogoutModal();
+            document.getElementById("app-screen").classList.add("hidden");
+            document.getElementById("login-screen").classList.remove("hidden");
+        }
+
+        function togglePasswordVisibility() {
+            const pwd = document.getElementById("login-password");
+            const icon = document.getElementById("eye-icon");
+            if (pwd.type === "password") { pwd.type = "text"; icon.classList.replace("fa-eye", "fa-eye-slash"); }
+            else { pwd.type = "password"; icon.classList.replace("fa-eye-slash", "fa-eye"); }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById("main-sidebar");
+            const texts = document.querySelectorAll(".sidebar-text");
+            if (sidebar.classList.contains("w-72")) {
+                sidebar.classList.replace("w-72", "w-20");
+                texts.forEach(t => t.classList.add("hidden"));
+            } else {
+                sidebar.classList.replace("w-20", "w-72");
+                texts.forEach(t => t.classList.remove("hidden"));
+            }
+        }
+
+        function switchTab(tabId) {
+            ['search', 'add-student', 'guidance', 'health', 'library', 'activity-logs', 'reports', 'archive'].forEach(t => {
+                const el = document.getElementById('tab-' + t);
+                const nav = document.getElementById('nav-' + t);
+                if (el) el.classList.add('hidden');
+                if (nav) nav.classList.remove('nav-btn-active');
+            });
+
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            const activeNav = document.getElementById('nav-' + tabId);
+            if (activeNav) activeNav.classList.add('nav-btn-active');
+        }
+
+        function renderDashboardStats() {
+            document.getElementById("stat-total-students").textContent = studentsList.length;
+            
+            let guidanceCount = 0, healthCount = 0, libraryCount = 0;
+            studentsList.forEach(s => {
+                if (s.guidanceLogs) guidanceCount += s.guidanceLogs.length;
+                if (s.healthLogs) healthCount += s.healthLogs.length;
+                if (s.libraryLogs) libraryCount += s.libraryLogs.length;
+            });
+
+            document.getElementById("stat-guidance-count").textContent = guidanceCount;
+            document.getElementById("stat-health-count").textContent = healthCount;
+            document.getElementById("stat-library-count").textContent = libraryCount;
+
+            document.getElementById("rep-total-students").textContent = studentsList.length;
+            document.getElementById("rep-guidance-cases").textContent = guidanceCount;
+            document.getElementById("rep-clinic-visits").textContent = healthCount;
+
+            const breakdownEl = document.getElementById("rep-grade-breakdown");
+            if (breakdownEl) {
+                breakdownEl.innerHTML = ALL_GRADES.map(g => {
+                    const count = studentsList.filter(s => s.grade === g).length;
+                    return `<div class="p-2 border rounded dark:border-slate-700"><b>${g}:</b> ${count} Students</div>`;
+                }).join('');
+            }
+        }
+
+        function handleStudentSearch() {
+            const query = document.getElementById("global-search-input").value.toLowerCase().trim();
+            window.activeSearchQuery = query;
+            const resCard = document.getElementById("student-search-results");
+
+            if (!query) {
+                resCard.classList.add("hidden");
+                return;
+            }
+
+            const found = studentsList.find(s => 
+                (s.studentNo && s.studentNo.toLowerCase().includes(query)) ||
+                (s.lrn && s.lrn.toLowerCase().includes(query)) ||
+                (`${s.fname} ${s.lname}`).toLowerCase().includes(query)
+            );
+
+            if (found) {
+                resCard.classList.remove("hidden");
+                document.getElementById("sr-fullname").textContent = `${found.fname} ${found.mname ? found.mname + ' ' : ''}${found.lname}`;
+                document.getElementById("sr-studentno").textContent = found.studentNo || "N/A";
+                document.getElementById("sr-lrn").textContent = found.lrn || "N/A";
+                document.getElementById("sr-grade").textContent = found.grade || "N/A";
+                document.getElementById("sr-dob").textContent = found.dob || "N/A";
+                
+                if (found.dob) {
+                    const birthYear = new Date(found.dob).getFullYear();
+                    document.getElementById("sr-age").textContent = new Date().getFullYear() - birthYear;
+                } else {
+                    document.getElementById("sr-age").textContent = "N/A";
+                }
+
+                document.getElementById("sr-gender").textContent = found.gender || "N/A";
+                document.getElementById("sr-religion").textContent = found.religion || "N/A";
+                document.getElementById("sr-birthplace").textContent = found.birthplace || "N/A";
+                document.getElementById("sr-address").textContent = found.address || "N/A";
+
+                document.getElementById("sr-parent-info-display").innerHTML = `
+                    <p><b>Father:</b> ${found.father ? found.father.name : 'N/A'} (${found.father ? found.father.occ : 'N/A'}) - Tel: ${found.father ? found.father.contact : 'N/A'}</p>
+                    <p><b>Mother:</b> ${found.mother ? found.mother.name : 'N/A'} (${found.mother ? found.mother.occ : 'N/A'}) - Tel: ${found.mother ? found.mother.contact : 'N/A'}</p>
+                    <p><b>Guardian:</b> ${found.guardian ? found.guardian.name : 'N/A'} - Tel: ${found.guardian ? found.guardian.contact : 'N/A'}</p>
+                    <p><b>Emergency:</b> ${found.emergency ? found.emergency.person : 'N/A'} (${found.emergency ? found.emergency.rel : 'N/A'}) - Tel: ${found.emergency ? found.emergency.contact : 'N/A'}</p>
+                `;
+
+                if (found.academicHistory && found.academicHistory.length) {
+                    document.getElementById("sr-academic-history-display").innerHTML = `
+                        <table class="w-full text-xs text-left border dark:border-slate-700">
+                            <tr class="bg-slate-200 dark:bg-slate-700"><th>Grade</th><th>S.Y.</th><th>School</th><th>Sec.</th><th>Adviser</th></tr>
+                            ${found.academicHistory.map(a => `<tr><td>${a.grade}</td><td>${a.sy}</td><td>${a.school}</td><td>${a.section}</td><td>${a.adviser}</td></tr>`).join('')}
+                        </table>
+                    `;
+                } else {
+                    document.getElementById("sr-academic-history-display").innerHTML = `<p class="text-slate-400">Walang academic history</p>`;
+                }
+
+                const assessmentText = `<div><b>Skills:</b> ${found.skills || 'None'} | <b>Pathways:</b> ${found.pathways || 'None'}</div>`;
+                const examText = found.entranceExam ? `<div><b>Entrance Exam:</b> Total Score ${found.entranceExam.total} (${found.entranceExam.remarks})</div>` : '';
+                const guidanceLogsText = (found.guidanceLogs && found.guidanceLogs.length) ?
+                    found.guidanceLogs.map(l => `<p><b>${l.date}:</b> ${l.desc} (${l.remarks || 'Accomplished'}) - ${l.facilitator}</p>`).join('') : '<p class="text-slate-400">Walang guidance logs</p>';
+
+                document.getElementById("sr-guidance-detailed-list").innerHTML = assessmentText + examText + guidanceLogsText;
+
+                const bmiText = (found.bmiLogs && found.bmiLogs.length) ? 
+                    `<div><b>Annual BMI:</b> ${found.bmiLogs.map(b => `${b.grade}: ${b.height}cm / ${b.weight}kg (${b.status})`).join(', ')}</div>` : '';
+
+                const healthText = (found.healthLogs && found.healthLogs.length) ?
+                    found.healthLogs.map(l => `<p><b>${l.date}:</b> ${l.desc} - ${l.recommendation || 'Clinic Visit'}</p>`).join('') : '<p class="text-slate-400">Walang health logs</p>';
+
+                document.getElementById("sr-health-detailed-list").innerHTML = bmiText + healthText;
+
+                document.getElementById("sr-library-detailed-list").innerHTML = ((found.scholasticLogs && found.scholasticLogs.length) || (found.libraryLogs && found.libraryLogs.length)) ?
+                    `<div><b>Scholastic Records:</b> ${found.scholasticLogs ? found.scholasticLogs.map(s => `${s.grade}: ${s.record}`).join(', ') : 'None'}</div>
+                     <div><b>Borrowed Books:</b> ${found.libraryLogs ? found.libraryLogs.map(l => `${l.book}`).join(', ') : 'None'}</div>` :
+                    '<p class="text-slate-400">Walang library records</p>';
+
+                window.activeSearchStudent = found;
+            } else {
+                resCard.classList.add("hidden");
+            }
+        }
+
+        function saveNewStudent(e) {
+            e.preventDefault();
+            if (currentUser.role !== "Registrar") {
+                alert("Si Registrar lang ang may permit mag-save ng bagong profile!");
+                return;
+            }
+
+            const sNo = document.getElementById("add-studentno").value.trim();
+
+            const academicHistory = ALL_GRADES.map(g => {
+                const key = g.replace(/\s+/g, '');
+                return {
+                    grade: g,
+                    sy: document.getElementById(`acad-sy-${key}`).value,
+                    school: document.getElementById(`acad-school-${key}`).value,
+                    section: document.getElementById(`acad-sec-${key}`).value,
+                    adviser: document.getElementById(`acad-adv-${key}`).value
+                };
+            }).filter(a => a.sy || a.school);
+
+            const newStudentData = {
+                studentNo: sNo,
+                lrn: document.getElementById("add-lrn").value.trim(),
+                grade: document.getElementById("add-grade").value,
+                fname: document.getElementById("add-fname").value.trim().toUpperCase(),
+                mname: document.getElementById("add-mname").value.trim().toUpperCase(),
+                lname: document.getElementById("add-lname").value.trim().toUpperCase(),
+                dob: document.getElementById("add-dob").value,
+                gender: document.getElementById("add-gender").value,
+                religion: document.getElementById("add-religion").value,
+                birthplace: document.getElementById("add-birthplace").value,
+                address: document.getElementById("add-address").value,
+                father: {
+                    name: document.getElementById("add-f-name").value,
+                    occ: document.getElementById("add-f-occ").value,
+                    contact: document.getElementById("add-f-contact").value,
+                    email: document.getElementById("add-f-email").value,
+                    company: document.getElementById("add-f-company").value,
+                    religion: document.getElementById("add-f-religion").value,
+                    educ: document.getElementById("add-f-educ").value
+                },
+                mother: {
+                    name: document.getElementById("add-m-name").value,
+                    occ: document.getElementById("add-m-occ").value,
+                    contact: document.getElementById("add-m-contact").value,
+                    email: document.getElementById("add-m-email").value,
+                    company: document.getElementById("add-m-company").value,
+                    religion: document.getElementById("add-m-religion").value,
+                    educ: document.getElementById("add-m-educ").value
+                },
+                guardian: {
+                    name: document.getElementById("add-g-name").value,
+                    occ: document.getElementById("add-g-occ").value,
+                    contact: document.getElementById("add-g-contact").value,
+                    email: document.getElementById("add-g-email").value
+                },
+                emergency: {
+                    person: document.getElementById("add-emer-person").value,
+                    contact: document.getElementById("add-emer-contact").value,
+                    rel: document.getElementById("add-emer-rel").value,
+                    email: document.getElementById("add-emer-email").value
+                },
+                academicHistory: academicHistory,
+                bmiLogs: [], guidanceLogs: [], healthLogs: [], libraryLogs: [], scholasticLogs: []
+            };
+
+            db.collection("students").doc(sNo).set(newStudentData).then(() => {
+                addAuditLog("Added Student Profile to Firestore Database", sNo);
+                alert("Student Profile Saved Successfully to Firebase Database!");
+                e.target.reset();
+                switchTab("search");
+            }).catch(err => alert("Error saving: " + err.message));
+        }
+
+        function saveGuidanceAssessment(e) {
+            e.preventDefault();
+            const sNo = document.getElementById("ga-student-select").value;
+            const student = studentsList.find(s => s.studentNo === sNo);
+            if (student) {
+                db.collection("students").doc(sNo).update({
+                    skills: document.getElementById("ga-skills").value,
+                    pathways: document.getElementById("ga-pathways").value,
+                    condition: document.getElementById("ga-condition").value
+                }).then(() => {
+                    addAuditLog("Updated Guidance Assessment Details", sNo);
+                    alert("Assessment Saved to Database!");
+                    e.target.reset();
+                });
+            }
+        }
+
+        function saveEntranceExamResult(e) {
+            e.preventDefault();
+            const sNo = document.getElementById("exam-student-select").value;
+            const student = studentsList.find(s => s.studentNo === sNo);
+            if (student) {
+                const entranceExam = {
+                    date: document.getElementById("exam-date").value,
+                    evaluator: document.getElementById("exam-evaluator").value,
+                    vcomp: document.getElementById("exam-vcomp").value,
+                    vreas: document.getElementById("exam-vreas").value,
+                    quant: document.getElementById("exam-quant").value,
+                    figural: document.getElementById("exam-figural").value,
+                    total: document.getElementById("exam-total").value,
+                    remarks: document.getElementById("exam-remarks").value,
+                    gwa: document.getElementById("exam-gwa").value,
+                    prevSchool: document.getElementById("exam-prevschool").value
+                };
+                db.collection("students").doc(sNo).update({ entranceExam: entranceExam }).then(() => {
+                    addAuditLog("Saved Entrance Examination Result", sNo);
+                    alert("Entrance Exam Result Saved to Database!");
+                    e.target.reset();
+                });
+            }
+        }
+
+        function saveGuidanceLog(e) {
+            e.preventDefault();
+            const sNo = document.getElementById("g-student-select").value;
+            const student = studentsList.find(s => s.studentNo === sNo);
+            if (student) {
+                const logs = student.guidanceLogs || [];
+                logs.push({
+                    date: document.getElementById("g-date").value,
+                    desc: document.getElementById("g-desc").value,
+                    remarks: document.getElementById("g-remarks").value || "Accomplished",
+                    facilitator: document.getElementById("g-facilitator").value
+                });
+                db.collection("students").doc(sNo).update({ guidanceLogs: logs }).then(() => {
+                    addAuditLog("Added Guidance Counselling Log", sNo);
+                    alert("Guidance Log Saved to Database!");
+                    e.target.reset();
+                });
+            }
+        }
+
+        function saveBmiRecord(e) {
+            e.preventDefault();
+            const sNo = document.getElementById("bmi-student-select").value;
+            const student = studentsList.find(s => s.studentNo === sNo);
+            if (student) {
+                const h = parseFloat(document.getElementById("bmi-height").value);
+                const w = parseFloat(document.getElementById("bmi-weight").value);
+                const hM = h / 100;
+                const bmi = (w / (hM * hM)).toFixed(1);
+                let status = "Normal";
+                if (bmi < 18.5) status = "Underweight";
+                else if (bmi >= 25 && bmi < 29.9) status = "Overweight";
+                else if (bmi >= 30) status = "Obese";
+
+                const logs = student.bmiLogs || [];
+                logs.push({
+                    grade: document.getElementById("bmi-grade").value,
+                    height: h,
+                    weight: w,
+                    status: status
+                });
+
+                db.collection("students").doc(sNo).update({ bmiLogs: logs }).then(() => {
+                    addAuditLog("Saved Annual BMI Entry", sNo);
+                    alert("Annual BMI Entry Saved Successfully!");
+                    e.target.reset();
+                });
+            }
+        }
+
+        function saveHealthLog(e) {
+            e.preventDefault();
+            const sNo = document.getElementById("h-student-select").value;
+            const student = studentsList.find(s => s.studentNo === sNo);
+            if (student) {
+                const logs = student.healthLogs || [];
+                logs.push({
+                    date: document.getElementById("h-date").value,
+                    desc: document.getElementById("h-desc").value,
+                    recommendation: "Clinic Visit",
+                    medicine: "Treated"
+                });
+                db.collection("students").doc(sNo).update({ healthLogs: logs }).then(() => {
+                    addAuditLog("Added Clinic Consultation Log", sNo);
+                    alert("Clinic Log Saved to Database!");
+                    e.target.reset();
+                });
+            }
+        }
+
+        function saveScholasticRecord(e) {
+            e.preventDefault();
+            const sNo = document.getElementById("sch-student-select").value;
+            const student = studentsList.find(s => s.studentNo === sNo);
+            if (student) {
+                const logs = student.scholasticLogs || [];
+                logs.push({
+                    grade: document.getElementById("sch-grade").value,
+                    record: document.getElementById("sch-record").value,
+                    remarks: "Promoted",
+                    adviser: "Class Adviser"
+                });
+                db.collection("students").doc(sNo).update({ scholasticLogs: logs }).then(() => {
+                    addAuditLog("Added Scholastic Grade Record", sNo);
+                    alert("Scholastic Record Saved to Database!");
+                    e.target.reset();
+                });
+            }
+        }
+
+        function saveLibraryLog(e) {
+            e.preventDefault();
+            const sNo = document.getElementById("l-student-select").value;
+            const student = studentsList.find(s => s.studentNo === sNo);
+            if (student) {
+                const logs = student.libraryLogs || [];
+                logs.push({
+                    dateBorrowed: new Date().toISOString().split('T')[0],
+                    book: document.getElementById("l-book").value,
+                    remarks: "Good Condition",
+                    dateReturned: "Pending"
+                });
+                db.collection("students").doc(sNo).update({ libraryLogs: logs }).then(() => {
+                    addAuditLog("Added Library Log", sNo);
+                    alert("Library Log Saved to Database!");
+                    e.target.reset();
+                });
+            }
+        }
+
+        function updateDropdowns() {
+            ['ga-student-select', 'exam-student-select', 'g-student-select', 'bmi-student-select', 'h-student-select', 'sch-student-select', 'l-student-select'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = studentsList.map(s => `<option value="${s.studentNo}">${s.studentNo} - ${s.fname} ${s.lname}</option>`).join('');
+            });
+        }
+
+        function renderActivityLogs(logs) {
+            document.getElementById("activity-logs-tbody").innerHTML = logs.map(a => `
+                <tr><td class="p-4">${a.timestamp}</td><td class="p-4 font-bold text-blue-600">${a.user}</td><td class="p-4">${a.action}</td><td class="p-4 font-mono font-bold">${a.target}</td></tr>
+            `).join('');
+        }
+
+        function printStudentExcelReport() {
+            const found = window.activeSearchStudent;
+            if (!found) {
+                alert("Mangyaring maghanap muna ng estudyante sa search bar bago mag-print.");
+                return;
+            }
+
+            document.getElementById("pr-search-name").textContent = `${found.fname} ${found.lname}`;
+            document.getElementById("pr-sno").textContent = found.studentNo || '---';
+            document.getElementById("pr-lrn").textContent = found.lrn || '---';
+            document.getElementById("pr-fullname").textContent = `${found.fname} ${found.mname ? found.mname + ' ' : ''}${found.lname}`;
+            document.getElementById("pr-dob").textContent = found.dob || "N/A";
+            
+            if (found.dob) {
+                document.getElementById("pr-age").textContent = new Date().getFullYear() - new Date(found.dob).getFullYear();
+            }
+
+            document.getElementById("pr-gender").textContent = found.gender || "N/A";
+            document.getElementById("pr-religion").textContent = found.religion || "N/A";
+            document.getElementById("pr-address").textContent = found.address || "N/A";
+
+            document.getElementById("pr-f-name").textContent = found.father ? found.father.name : 'N/A';
+            document.getElementById("pr-f-contact").textContent = found.father ? found.father.contact : 'N/A';
+            document.getElementById("pr-m-name").textContent = found.mother ? found.mother.name : 'N/A';
+            document.getElementById("pr-m-contact").textContent = found.mother ? found.mother.contact : 'N/A';
+            document.getElementById("pr-g-name").textContent = found.guardian ? found.guardian.name : 'N/A';
+            document.getElementById("pr-g-contact").textContent = found.guardian ? found.guardian.contact : 'N/A';
+            document.getElementById("pr-emer-person").textContent = found.emergency ? found.emergency.person : 'N/A';
+            document.getElementById("pr-emer-rel").textContent = found.emergency ? `${found.emergency.rel} (${found.emergency.contact})` : 'N/A';
+
+            document.getElementById("pr-g-skills").textContent = found.skills || "N/A";
+            document.getElementById("pr-g-pathways").textContent = found.pathways || "N/A";
+            document.getElementById("pr-g-condition").textContent = found.condition || "N/A";
+
+            if (found.entranceExam) {
+                document.getElementById("pr-exam-date").textContent = found.entranceExam.date;
+                document.getElementById("pr-exam-evaluator").textContent = found.entranceExam.evaluator;
+                document.getElementById("pr-exam-scores-tbody").innerHTML = `<tr><td>${found.entranceExam.vcomp}</td><td>${found.entranceExam.vreas}</td><td>${found.entranceExam.quant}</td><td>${found.entranceExam.figural}</td></tr>`;
+                document.getElementById("pr-exam-summary-tbody").innerHTML = `<tr><td>${found.entranceExam.total}</td><td>${found.entranceExam.remarks}</td><td>${found.entranceExam.gwa}</td><td>${found.entranceExam.prevSchool}</td></tr>`;
+            }
+
+            if (found.guidanceLogs && found.guidanceLogs.length) {
+                document.getElementById("pr-guidance-tbody").innerHTML = found.guidanceLogs.map(l => `<tr><td>${l.date}</td><td>${l.desc}</td><td>${l.remarks}</td><td>${l.facilitator}</td></tr>`).join('');
+            }
+
+            if (found.bmiLogs && found.bmiLogs.length) {
+                document.getElementById("pr-bmi-tbody").innerHTML = found.bmiLogs.map(b => `<tr><td>${b.grade}</td><td>${b.height} cm</td><td>${b.weight} kg</td><td>${b.status}</td></tr>`).join('');
+            }
+
+            if (found.healthLogs && found.healthLogs.length) {
+                document.getElementById("pr-health-tbody").innerHTML = found.healthLogs.map(h => `<tr><td>${h.date}</td><td>${h.desc}</td><td>${h.recommendation}</td><td>${h.medicine}</td></tr>`).join('');
+            }
+
+            if (found.scholasticLogs && found.scholasticLogs.length) {
+                document.getElementById("pr-scholastic-tbody").innerHTML = found.scholasticLogs.map(s => `<tr><td>${s.grade}</td><td>${s.record}</td><td>${s.remarks}</td><td>${s.adviser}</td></tr>`).join('');
+            }
+
+            if (found.libraryLogs && found.libraryLogs.length) {
+                document.getElementById("pr-library-tbody").innerHTML = found.libraryLogs.map(l => `<tr><td>${l.dateBorrowed}</td><td>${l.book}</td><td>${l.remarks}</td><td>${l.dateReturned}</td></tr>`).join('');
+            }
+
+            window.print();
+        }
+    </script>
+</body>
+</html>
